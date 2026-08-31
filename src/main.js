@@ -12,18 +12,38 @@ app.innerHTML = `
     </section>
 
     <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
-    <div class="hint">CLICK TO DISTURB</div>
+    <div class="hint">MOVE TO DISRUPT</div>
     <div class="slice slice-a" aria-hidden="true"></div>
     <div class="slice slice-b" aria-hidden="true"></div>
+    <div class="slice slice-c" aria-hidden="true"></div>
   </main>
 `
 
 const landing = document.querySelector('.landing')
+let stage = -1
 let impactTimer
 
+function setStage(next) {
+  if (next === stage) return
+  stage = next
+  landing.dataset.stage = String(stage)
+}
+
+setStage(0)
+
+landing.addEventListener('pointermove', (event) => {
+  const progress = Math.max(0, Math.min(0.999, event.clientX / window.innerWidth))
+  setStage(Math.floor(progress * 4))
+}, { passive: true })
+
+landing.addEventListener('pointerleave', () => setStage(0), { passive: true })
+
 landing.addEventListener('pointerdown', () => {
-  if (landing.classList.contains('impact')) return
-  landing.classList.add('impact')
   clearTimeout(impactTimer)
-  impactTimer = setTimeout(() => landing.classList.remove('impact'), 220)
+  landing.classList.add('impact')
+  landing.dataset.stage = '3'
+  impactTimer = setTimeout(() => {
+    landing.classList.remove('impact')
+    setStage(stage < 0 ? 0 : stage)
+  }, 260)
 }, { passive: true })
