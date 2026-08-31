@@ -7,9 +7,9 @@ app.innerHTML = `
 
     <section class="hero-lockup">
       <div class="glitch-rose" aria-hidden="true"></div>
-      <img class="brand-logo" src="./assets/silo7.svg" alt="Silo 7" />
-      <img class="logo-fragment fragment-c" src="./assets/silo7.svg" alt="" aria-hidden="true" />
-      <img class="logo-fragment fragment-r" src="./assets/silo7.svg" alt="" aria-hidden="true" />
+      <img class="brand-logo" src="./assets/logo.png" alt="Silo 7" />
+      <img class="logo-fragment fragment-c" src="./assets/logo.png" alt="" aria-hidden="true" />
+      <img class="logo-fragment fragment-r" src="./assets/logo.png" alt="" aria-hidden="true" />
     </section>
 
     <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
