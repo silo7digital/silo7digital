@@ -1,5 +1,3 @@
-import './styles.css'
-
 const app = document.querySelector('#app')
 
 app.innerHTML = `
@@ -58,7 +56,6 @@ window.addEventListener('wheel', (event) => {
 }, { passive: true })
 
 window.addEventListener('pointerdown', () => disturb(0.24))
-
 window.addEventListener('touchmove', () => disturb(0.12), { passive: true })
 
 function tick() {
