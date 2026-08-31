@@ -8,7 +8,6 @@ app.innerHTML = `
     <section class="hero-lockup">
       <div class="glitch-rose" aria-hidden="true"></div>
       <img class="brand-logo" src="./assets/silo7.svg" alt="Silo 7" />
-      <div class="tagline">DISRUPTION OPTIONAL<br>BUT INEVITABLE....</div>
     </section>
 
     <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
