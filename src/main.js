@@ -39,11 +39,12 @@ landing.addEventListener('pointermove', (event) => {
 landing.addEventListener('pointerleave', () => setStage(0), { passive: true })
 
 landing.addEventListener('pointerdown', () => {
+  const restoreStage = stage
   clearTimeout(impactTimer)
   landing.classList.add('impact')
   landing.dataset.stage = '3'
   impactTimer = setTimeout(() => {
     landing.classList.remove('impact')
-    setStage(stage < 0 ? 0 : stage)
+    landing.dataset.stage = String(restoreStage)
   }, 260)
 }, { passive: true })
