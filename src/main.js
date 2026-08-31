@@ -19,7 +19,7 @@ app.innerHTML = `
       </div>
 
       <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
-      <div class="hint">MOVE THROUGH THE MARK</div>
+      <button class="hint" type="button" aria-label="Enter the seven client positions">MOVE THROUGH THE MARK</button>
       <div class="slice slice-a" aria-hidden="true"></div>
       <div class="slice slice-b" aria-hidden="true"></div>
       <div class="slice slice-c" aria-hidden="true"></div>
@@ -50,6 +50,7 @@ const clientsScene = document.querySelector('.scene-clients')
 const lockup = document.querySelector('.hero-lockup')
 const clientRing = document.querySelector('.client-ring')
 const backButton = document.querySelector('.scene-back')
+const enterButton = document.querySelector('.hint')
 const root = document.documentElement
 
 let level = 0
@@ -62,6 +63,7 @@ let currentScene = 0
 let wheelIntent = 0
 let wheelReset = 0
 let ringRotation = 0
+let transitionLocked = false
 
 function applyLevel(value) {
   level = Math.max(0, Math.min(1, value))
@@ -83,6 +85,8 @@ function settle() {
 }
 
 function showScene(index) {
+  if (transitionLocked || index === currentScene) return
+  transitionLocked = true
   currentScene = index
   experience.dataset.scene = index === 0 ? 'hero' : 'clients'
   heroScene.classList.toggle('is-active', index === 0)
@@ -90,6 +94,7 @@ function showScene(index) {
   heroScene.setAttribute('aria-hidden', index === 1 ? 'true' : 'false')
   clientsScene.setAttribute('aria-hidden', index === 0 ? 'true' : 'false')
   wheelIntent = 0
+  window.setTimeout(() => { transitionLocked = false }, 850)
 }
 
 function rotateClients(delta) {
@@ -131,18 +136,21 @@ heroScene.addEventListener('pointerleave', () => {
 
 experience.addEventListener('wheel', (event) => {
   event.preventDefault()
+  const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX
 
   if (currentScene === 0) {
-    wheelIntent += Math.max(-80, Math.min(80, event.deltaY + event.deltaX))
+    if (delta <= 0) return
+    wheelIntent += Math.min(60, delta)
     clearTimeout(wheelReset)
-    wheelReset = setTimeout(() => { wheelIntent = 0 }, 180)
-    if (wheelIntent > 150) showScene(1)
+    wheelReset = setTimeout(() => { wheelIntent = 0 }, 260)
+    if (wheelIntent >= 35) showScene(1)
     return
   }
 
-  rotateClients(event.deltaY + event.deltaX)
+  rotateClients(delta)
 }, { passive: false })
 
+enterButton.addEventListener('click', () => showScene(1))
 backButton.addEventListener('click', () => showScene(0))
 
 document.addEventListener('keydown', (event) => {
@@ -175,4 +183,6 @@ experience.addEventListener('touchend', (event) => {
   else if (currentScene === 1 && dx > 55) showScene(0)
 }, { passive: true })
 
-showScene(0)
+experience.dataset.scene = 'hero'
+heroScene.setAttribute('aria-hidden', 'false')
+clientsScene.setAttribute('aria-hidden', 'true')
