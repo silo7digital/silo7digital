@@ -28,10 +28,10 @@ app.innerHTML = `
     <section class="scene scene-clients" data-scene="clients" aria-label="Seven client positions">
       <div class="clients-noise" aria-hidden="true"></div>
       <div class="clients-stage">
-        <div class="client-orbit" aria-hidden="true"></div>
-        <div class="client-ring">
-          ${clientSlots}
-        </div>
+        <svg class="spiral-path" viewBox="0 0 1000 700" aria-hidden="true">
+          <path d="M500 350 C535 310 595 315 610 365 C630 430 555 470 485 452 C385 428 350 325 405 238 C475 128 645 137 730 242 C835 372 770 565 615 625" />
+        </svg>
+        <div class="client-spiral">${clientSlots}</div>
         <div class="clients-core">
           <span class="clients-kicker">SILO 7</span>
           <h1>WE ONLY WORK<br>WITH SEVEN<br>CLIENTS.</h1>
@@ -48,7 +48,7 @@ const experience = document.querySelector('.experience')
 const heroScene = document.querySelector('.scene-hero')
 const clientsScene = document.querySelector('.scene-clients')
 const lockup = document.querySelector('.hero-lockup')
-const clientRing = document.querySelector('.client-ring')
+const clientSpiral = document.querySelector('.client-spiral')
 const backButton = document.querySelector('.scene-back')
 const enterButton = document.querySelector('.hint')
 const root = document.documentElement
@@ -62,7 +62,7 @@ let settleFrame = 0
 let currentScene = 0
 let wheelIntent = 0
 let wheelReset = 0
-let ringRotation = 0
+let spiralRotation = 0
 let transitionLocked = false
 
 function applyLevel(value) {
@@ -94,12 +94,12 @@ function showScene(index) {
   heroScene.setAttribute('aria-hidden', index === 1 ? 'true' : 'false')
   clientsScene.setAttribute('aria-hidden', index === 0 ? 'true' : 'false')
   wheelIntent = 0
-  window.setTimeout(() => { transitionLocked = false }, 850)
+  window.setTimeout(() => { transitionLocked = false }, 1100)
 }
 
-function rotateClients(delta) {
-  ringRotation += delta * 0.045
-  clientRing.style.setProperty('--ring-rotation', `${ringRotation}deg`)
+function moveSpiral(delta) {
+  spiralRotation += Math.max(-18, Math.min(18, delta * 0.035))
+  clientSpiral.style.setProperty('--spiral-rotation', `${spiralRotation}deg`)
 }
 
 heroScene.addEventListener('pointermove', (event) => {
@@ -147,7 +147,7 @@ experience.addEventListener('wheel', (event) => {
     return
   }
 
-  rotateClients(delta)
+  moveSpiral(delta)
 }, { passive: false })
 
 enterButton.addEventListener('click', () => showScene(1))
@@ -157,7 +157,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'PageDown') {
     event.preventDefault()
     if (currentScene === 0) showScene(1)
-    else rotateClients(90)
+    else moveSpiral(90)
   }
 
   if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'PageUp' || event.key === 'Escape') {
