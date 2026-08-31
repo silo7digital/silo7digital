@@ -1,27 +1,55 @@
 const app = document.querySelector('#app')
 
-app.innerHTML = `
-  <main class="landing" aria-label="Silo 7">
-    <div class="rose-field" aria-hidden="true"></div>
-    <div class="shade" aria-hidden="true"></div>
+const clientSlots = Array.from({ length: 7 }, (_, index) => {
+  const number = String(index + 1).padStart(2, '0')
+  return `<button class="client-slot slot-${index + 1}" type="button" aria-label="Client position ${index + 1}"><span class="slot-number">${number}</span><span class="slot-label">CLIENT</span></button>`
+}).join('')
 
-    <section class="hero-lockup">
-      <div class="glitch-rose" aria-hidden="true"></div>
-      <img class="brand-logo" src="./assets/logo.png" alt="Silo 7" />
-      <img class="logo-fragment fragment-c" src="./assets/logo.png" alt="" aria-hidden="true" />
-      <img class="logo-fragment fragment-r" src="./assets/logo.png" alt="" aria-hidden="true" />
+app.innerHTML = `
+  <main class="experience" aria-label="Silo 7">
+    <section class="scene scene-hero is-active" data-scene="hero" aria-label="Silo 7 introduction">
+      <div class="rose-field" aria-hidden="true"></div>
+      <div class="shade" aria-hidden="true"></div>
+
+      <div class="hero-lockup">
+        <div class="glitch-rose" aria-hidden="true"></div>
+        <img class="brand-logo" src="./assets/logo.png" alt="Silo 7" />
+        <img class="logo-fragment fragment-c" src="./assets/logo.png" alt="" aria-hidden="true" />
+        <img class="logo-fragment fragment-r" src="./assets/logo.png" alt="" aria-hidden="true" />
+      </div>
+
+      <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
+      <div class="hint">MOVE THROUGH THE MARK</div>
+      <div class="slice slice-a" aria-hidden="true"></div>
+      <div class="slice slice-b" aria-hidden="true"></div>
+      <div class="slice slice-c" aria-hidden="true"></div>
     </section>
 
-    <div class="crosses" aria-hidden="true"><span>✝</span><span>✝</span><span>✝</span></div>
-    <div class="hint">MOVE THROUGH THE MARK</div>
-    <div class="slice slice-a" aria-hidden="true"></div>
-    <div class="slice slice-b" aria-hidden="true"></div>
-    <div class="slice slice-c" aria-hidden="true"></div>
+    <section class="scene scene-clients" data-scene="clients" aria-label="Seven client positions">
+      <div class="clients-noise" aria-hidden="true"></div>
+      <div class="clients-stage">
+        <div class="client-orbit" aria-hidden="true"></div>
+        <div class="client-ring">
+          ${clientSlots}
+        </div>
+        <div class="clients-core">
+          <span class="clients-kicker">SILO 7</span>
+          <h1>WE ONLY WORK<br>WITH SEVEN<br>CLIENTS.</h1>
+          <p>SEVEN POSITIONS. THAT'S IT.</p>
+        </div>
+      </div>
+      <button class="scene-back" type="button" aria-label="Return to Silo 7 introduction">BACK</button>
+      <div class="clients-hint">MOVE THE WHEEL</div>
+    </section>
   </main>
 `
 
-const landing = document.querySelector('.landing')
+const experience = document.querySelector('.experience')
+const heroScene = document.querySelector('.scene-hero')
+const clientsScene = document.querySelector('.scene-clients')
 const lockup = document.querySelector('.hero-lockup')
+const clientRing = document.querySelector('.client-ring')
+const backButton = document.querySelector('.scene-back')
 const root = document.documentElement
 
 let level = 0
@@ -30,6 +58,10 @@ let lastY = 0
 let lastTime = performance.now()
 let settleTimer = 0
 let settleFrame = 0
+let currentScene = 0
+let wheelIntent = 0
+let wheelReset = 0
+let ringRotation = 0
 
 function applyLevel(value) {
   level = Math.max(0, Math.min(1, value))
@@ -50,7 +82,24 @@ function settle() {
   settleFrame = requestAnimationFrame(decay)
 }
 
-landing.addEventListener('pointermove', (event) => {
+function showScene(index) {
+  currentScene = index
+  experience.dataset.scene = index === 0 ? 'hero' : 'clients'
+  heroScene.classList.toggle('is-active', index === 0)
+  clientsScene.classList.toggle('is-active', index === 1)
+  heroScene.setAttribute('aria-hidden', index === 1 ? 'true' : 'false')
+  clientsScene.setAttribute('aria-hidden', index === 0 ? 'true' : 'false')
+  wheelIntent = 0
+}
+
+function rotateClients(delta) {
+  ringRotation += delta * 0.045
+  clientRing.style.setProperty('--ring-rotation', `${ringRotation}deg`)
+}
+
+heroScene.addEventListener('pointermove', (event) => {
+  if (currentScene !== 0) return
+
   const rect = lockup.getBoundingClientRect()
   const cx = rect.left + rect.width / 2
   const cy = rect.top + rect.height / 2
@@ -75,7 +124,55 @@ landing.addEventListener('pointermove', (event) => {
   settleTimer = setTimeout(settle, 75)
 }, { passive: true })
 
-landing.addEventListener('pointerleave', () => {
+heroScene.addEventListener('pointerleave', () => {
   clearTimeout(settleTimer)
   settle()
 }, { passive: true })
+
+experience.addEventListener('wheel', (event) => {
+  event.preventDefault()
+
+  if (currentScene === 0) {
+    wheelIntent += Math.max(-80, Math.min(80, event.deltaY + event.deltaX))
+    clearTimeout(wheelReset)
+    wheelReset = setTimeout(() => { wheelIntent = 0 }, 180)
+    if (wheelIntent > 150) showScene(1)
+    return
+  }
+
+  rotateClients(event.deltaY + event.deltaX)
+}, { passive: false })
+
+backButton.addEventListener('click', () => showScene(0))
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'PageDown') {
+    event.preventDefault()
+    if (currentScene === 0) showScene(1)
+    else rotateClients(90)
+  }
+
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'PageUp' || event.key === 'Escape') {
+    event.preventDefault()
+    if (currentScene === 1) showScene(0)
+  }
+})
+
+let touchStartX = 0
+let touchStartY = 0
+
+experience.addEventListener('touchstart', (event) => {
+  const touch = event.touches[0]
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+}, { passive: true })
+
+experience.addEventListener('touchend', (event) => {
+  const touch = event.changedTouches[0]
+  const dx = touch.clientX - touchStartX
+  const dy = touch.clientY - touchStartY
+  if (currentScene === 0 && (dx < -55 || dy < -55)) showScene(1)
+  else if (currentScene === 1 && dx > 55) showScene(0)
+}, { passive: true })
+
+showScene(0)
