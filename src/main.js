@@ -2,7 +2,7 @@ const app = document.querySelector('#app')
 
 const clientSlots = Array.from({ length: 7 }, (_, index) => {
   const number = String(index + 1).padStart(2, '0')
-  return `<button class="client-slot slot-${index + 1}" type="button" aria-label="Client position ${index + 1}"><span class="slot-number">${number}</span><span class="slot-label">CLIENT</span></button>`
+  return `<button class="client-slot" type="button" data-slot="${index}" aria-label="Client position ${index + 1}"><span class="slot-number">${number}</span><span class="slot-label">CLIENT</span></button>`
 }).join('')
 
 app.innerHTML = `
@@ -25,12 +25,8 @@ app.innerHTML = `
       <div class="slice slice-c" aria-hidden="true"></div>
     </section>
 
-    <section class="scene scene-clients" data-scene="clients" aria-label="Seven client positions">
-      <div class="clients-noise" aria-hidden="true"></div>
+    <section class="scene scene-clients" data-scene="clients" aria-label="Seven client positions" aria-hidden="true">
       <div class="clients-stage">
-        <svg class="spiral-path" viewBox="0 0 1000 700" aria-hidden="true">
-          <path d="M500 350 C535 310 595 315 610 365 C630 430 555 470 485 452 C385 428 350 325 405 238 C475 128 645 137 730 242 C835 372 770 565 615 625" />
-        </svg>
         <div class="client-spiral">${clientSlots}</div>
         <div class="clients-core">
           <span class="clients-kicker">SILO 7</span>
@@ -48,7 +44,7 @@ const experience = document.querySelector('.experience')
 const heroScene = document.querySelector('.scene-hero')
 const clientsScene = document.querySelector('.scene-clients')
 const lockup = document.querySelector('.hero-lockup')
-const clientSpiral = document.querySelector('.client-spiral')
+const clientSlotsEls = [...document.querySelectorAll('.client-slot')]
 const backButton = document.querySelector('.scene-back')
 const enterButton = document.querySelector('.hint')
 const root = document.documentElement
@@ -62,8 +58,7 @@ let settleFrame = 0
 let currentScene = 0
 let wheelIntent = 0
 let wheelReset = 0
-let spiralRotation = 0
-let transitionLocked = false
+let spiralPhase = 0
 
 function applyLevel(value) {
   level = Math.max(0, Math.min(1, value))
@@ -84,9 +79,29 @@ function settle() {
   settleFrame = requestAnimationFrame(decay)
 }
 
+function layoutSpiral() {
+  const rect = document.querySelector('.clients-stage').getBoundingClientRect()
+  const cx = rect.width * 0.5
+  const cy = rect.height * 0.5
+  const unit = Math.min(rect.width, rect.height)
+
+  clientSlotsEls.forEach((slot, index) => {
+    const t = index * 0.92 + spiralPhase
+    const radius = unit * (0.075 + t * 0.088)
+    const angle = -1.28 + t * 1.08
+    const x = cx + Math.cos(angle) * radius * 1.42
+    const y = cy + Math.sin(angle) * radius * 0.86
+    const scale = Math.max(0.52, Math.min(1.2, 0.56 + t * 0.095))
+    const rotate = angle * 180 / Math.PI + 90
+    const opacity = Math.max(0.28, Math.min(1, 0.45 + t * 0.1))
+
+    slot.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(${rotate}deg) scale(${scale})`
+    slot.style.opacity = opacity.toFixed(2)
+    slot.style.zIndex = String(index + 2)
+  })
+}
+
 function showScene(index) {
-  if (transitionLocked || index === currentScene) return
-  transitionLocked = true
   currentScene = index
   experience.dataset.scene = index === 0 ? 'hero' : 'clients'
   heroScene.classList.toggle('is-active', index === 0)
@@ -94,12 +109,13 @@ function showScene(index) {
   heroScene.setAttribute('aria-hidden', index === 1 ? 'true' : 'false')
   clientsScene.setAttribute('aria-hidden', index === 0 ? 'true' : 'false')
   wheelIntent = 0
-  window.setTimeout(() => { transitionLocked = false }, 1100)
+  if (index === 1) requestAnimationFrame(layoutSpiral)
 }
 
 function moveSpiral(delta) {
-  spiralRotation += Math.max(-18, Math.min(18, delta * 0.035))
-  clientSpiral.style.setProperty('--spiral-rotation', `${spiralRotation}deg`)
+  spiralPhase += Math.max(-0.16, Math.min(0.16, delta * 0.0018))
+  spiralPhase = Math.max(-0.7, Math.min(1.2, spiralPhase))
+  layoutSpiral()
 }
 
 heroScene.addEventListener('pointermove', (event) => {
@@ -140,18 +156,30 @@ experience.addEventListener('wheel', (event) => {
 
   if (currentScene === 0) {
     if (delta <= 0) return
-    wheelIntent += Math.min(60, delta)
+    wheelIntent += Math.min(70, Math.abs(delta))
     clearTimeout(wheelReset)
-    wheelReset = setTimeout(() => { wheelIntent = 0 }, 260)
-    if (wheelIntent >= 35) showScene(1)
+    wheelReset = setTimeout(() => { wheelIntent = 0 }, 320)
+    root.style.setProperty('--journey', Math.min(1, wheelIntent / 90).toFixed(3))
+    if (wheelIntent >= 90) {
+      root.style.setProperty('--journey', '1')
+      showScene(1)
+      setTimeout(() => root.style.setProperty('--journey', '0'), 1200)
+    }
     return
   }
 
   moveSpiral(delta)
 }, { passive: false })
 
-enterButton.addEventListener('click', () => showScene(1))
-backButton.addEventListener('click', () => showScene(0))
+enterButton.addEventListener('click', () => {
+  root.style.setProperty('--journey', '1')
+  showScene(1)
+  setTimeout(() => root.style.setProperty('--journey', '0'), 1200)
+})
+
+backButton.addEventListener('click', () => {
+  showScene(0)
+})
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'PageDown') {
@@ -165,6 +193,10 @@ document.addEventListener('keydown', (event) => {
     if (currentScene === 1) showScene(0)
   }
 })
+
+window.addEventListener('resize', () => {
+  if (currentScene === 1) layoutSpiral()
+}, { passive: true })
 
 let touchStartX = 0
 let touchStartY = 0
