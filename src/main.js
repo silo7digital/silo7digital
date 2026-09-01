@@ -20,30 +20,36 @@ app.innerHTML = `
   </main>`
 
 const experience=document.querySelector('.experience'),hero=document.querySelector('.scene-hero'),clients=document.querySelector('.scene-clients'),lockup=document.querySelector('.hero-lockup'),slots=[...document.querySelectorAll('.client-slot')],back=document.querySelector('.scene-back'),enter=document.querySelector('.hint'),root=document.documentElement
-let level=0,lastX=0,lastY=0,lastTime=performance.now(),settleTimer=0,settleFrame=0,currentScene=0,wheelIntent=0,wheelReset=0,phase=0
+let level=0,lastX=0,lastY=0,lastTime=performance.now(),settleTimer=0,settleFrame=0,currentScene=0,wheelIntent=0,wheelReset=0,spiralOffset=0
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
 function applyLevel(v){level=clamp(v,0,1);root.style.setProperty('--disturb',level.toFixed(3))}
 function settle(){cancelAnimationFrame(settleFrame);const decay=()=>{level*=.88;if(level<.012){applyLevel(0);return}applyLevel(level);settleFrame=requestAnimationFrame(decay)};settleFrame=requestAnimationFrame(decay)}
 
-/* Reference behavior: a vertical corkscrew around the viewport centre. Cards cross the front large,
-   narrow almost edge-on at the sides/back, then return on the opposite side. */
+/* Geometry taken from the supplied Loop spiral implementation:
+   180 x 270 cards, 230px helix radius and one 360° turn every 882px. */
+const HELIX_RADIUS=230
+const HELIX_TURN=882
+const SLOT_STEP=HELIX_TURN/7
+
+function wrapHelixY(value){
+  const half=HELIX_TURN/2
+  return ((value+half)%HELIX_TURN+HELIX_TURN)%HELIX_TURN-half
+}
+
 function layoutSpiral(){
-  const w=innerWidth,h=innerHeight,cx=w*.54,cy=h*.50
   slots.forEach((slot,i)=>{
-    const a=phase+i*(Math.PI*2/7)
-    const depth=Math.cos(a)
-    const x=cx+Math.sin(a)*w*.34
-    const y=cy+Math.sin(a*2)*h*.31
-    const scale=.58+(depth+1)*.34
-    const yaw=Math.sin(a)*76
-    const tilt=Math.sin(a*2)*-4
-    slot.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-50%) perspective(900px) rotateY(${yaw}deg) rotateZ(${tilt}deg) scale(${scale})`
-    slot.style.opacity=String(.48+(depth+1)*.26)
-    slot.style.zIndex=String(Math.round((depth+1)*50)+2)
+    const y=wrapHelixY(i*SLOT_STEP+spiralOffset)
+    const angle=(y/HELIX_TURN)*Math.PI*2
+    const x=Math.sin(angle)*HELIX_RADIUS
+    const z=Math.cos(angle)*HELIX_RADIUS
+    const rotateY=-(angle*180/Math.PI)
+    slot.style.transform=`translate(-50%, -50%) translate3d(${x}px, ${y}px, ${z}px) rotateY(${rotateY}deg)`
+    slot.style.zIndex=String(Math.round(z+HELIX_RADIUS)+2)
   })
 }
+
 function showScene(index){currentScene=index;experience.dataset.scene=index?'clients':'hero';hero.classList.toggle('is-active',!index);clients.classList.toggle('is-active',!!index);hero.setAttribute('aria-hidden',index?'true':'false');clients.setAttribute('aria-hidden',index?'false':'true');wheelIntent=0;if(index)requestAnimationFrame(layoutSpiral)}
-function moveSpiral(delta){phase+=clamp(delta*.0025,-.22,.22);layoutSpiral()}
+function moveSpiral(delta){spiralOffset+=clamp(delta,-120,120)*.72;layoutSpiral()}
 
 hero.addEventListener('pointermove',e=>{if(currentScene)return;const r=lockup.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,nx=Math.abs(e.clientX-cx)/(r.width*.68),ny=Math.abs(e.clientY-cy)/(r.height*.78),proximity=Math.max(0,1-Math.sqrt(nx*nx+ny*ny)),now=performance.now(),dt=Math.max(16,now-lastTime),speed=Math.min(1,Math.hypot(e.clientX-lastX,e.clientY-lastY)/dt/1.35),d=Math.min(1,proximity*.82+speed*proximity*.65);root.style.setProperty('--px',((e.clientX-cx)/r.width).toFixed(3));root.style.setProperty('--py',((e.clientY-cy)/r.height).toFixed(3));applyLevel(Math.max(level*.72,d));lastX=e.clientX;lastY=e.clientY;lastTime=now;clearTimeout(settleTimer);settleTimer=setTimeout(settle,75)},{passive:true})
 hero.addEventListener('pointerleave',()=>{clearTimeout(settleTimer);settle()},{passive:true})
