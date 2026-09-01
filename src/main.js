@@ -1,8 +1,8 @@
 const app = document.querySelector('#app')
 
 const clientSlots = Array.from({ length: 7 }, (_, index) => {
-  const number = String(index + 1).padStart(2, '0')
-  return `<button class="client-slot" type="button" data-slot="${index}" aria-label="Client position ${index + 1}"><span class="slot-meta"><span>CLIENT POSITION</span><span>${number}</span></span><strong>${number}</strong></button>`
+  const number = String(7 - index).padStart(2, '0')
+  return `<button class="client-slot" type="button" data-slot="${index}" aria-label="Client position ${number}"><span class="slot-meta"><span>CLIENT POSITION</span><span>${number}</span></span><strong>${number}</strong></button>`
 }).join('')
 
 app.innerHTML = `
