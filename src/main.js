@@ -20,16 +20,19 @@ app.innerHTML = `
   </main>`
 
 const experience=document.querySelector('.experience'),hero=document.querySelector('.scene-hero'),clients=document.querySelector('.scene-clients'),lockup=document.querySelector('.hero-lockup'),slots=[...document.querySelectorAll('.client-slot')],back=document.querySelector('.scene-back'),enter=document.querySelector('.hint'),root=document.documentElement
-let level=0,lastX=0,lastY=0,lastTime=performance.now(),settleTimer=0,settleFrame=0,currentScene=0,wheelIntent=0,wheelReset=0,spiralOffset=0
+let level=0,lastX=0,lastY=0,lastTime=performance.now(),settleTimer=0,settleFrame=0,currentScene=0,wheelIntent=0,wheelReset=0,spiralOffset=0,touchStartY=0,touchLastY=0,touchMoved=false
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
 function applyLevel(v){level=clamp(v,0,1);root.style.setProperty('--disturb',level.toFixed(3))}
 function settle(){cancelAnimationFrame(settleFrame);const decay=()=>{level*=.88;if(level<.012){applyLevel(0);return}applyLevel(level);settleFrame=requestAnimationFrame(decay)};settleFrame=requestAnimationFrame(decay)}
 
 /* Geometry taken from the supplied Loop spiral implementation:
-   180 x 270 cards, 230px helix radius and one 360° turn every 882px. */
-const HELIX_RADIUS=230
+   180 x 270 cards, 230px desktop helix radius and one 360° turn every 882px. */
 const HELIX_TURN=882
 const SLOT_STEP=HELIX_TURN/7
+
+function getHelixRadius(){
+  return innerWidth<=800?Math.min(150,innerWidth*.34):230
+}
 
 function wrapHelixY(value){
   const half=HELIX_TURN/2
@@ -37,14 +40,15 @@ function wrapHelixY(value){
 }
 
 function layoutSpiral(){
+  const radius=getHelixRadius()
   slots.forEach((slot,i)=>{
     const y=wrapHelixY(i*SLOT_STEP+spiralOffset)
     const angle=(y/HELIX_TURN)*Math.PI*2
-    const x=Math.sin(angle)*HELIX_RADIUS
-    const z=Math.cos(angle)*HELIX_RADIUS
+    const x=Math.sin(angle)*radius
+    const z=Math.cos(angle)*radius
     const rotateY=-(angle*180/Math.PI)
     slot.style.transform=`translate(-50%, -50%) translate3d(${x}px, ${y}px, ${z}px) rotateY(${rotateY}deg)`
-    slot.style.zIndex=String(Math.round(z+HELIX_RADIUS)+2)
+    slot.style.zIndex=String(Math.round(z+radius)+2)
   })
 }
 
@@ -54,6 +58,11 @@ function moveSpiral(delta){spiralOffset+=clamp(delta,-120,120)*.72;layoutSpiral(
 hero.addEventListener('pointermove',e=>{if(currentScene)return;const r=lockup.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,nx=Math.abs(e.clientX-cx)/(r.width*.68),ny=Math.abs(e.clientY-cy)/(r.height*.78),proximity=Math.max(0,1-Math.sqrt(nx*nx+ny*ny)),now=performance.now(),dt=Math.max(16,now-lastTime),speed=Math.min(1,Math.hypot(e.clientX-lastX,e.clientY-lastY)/dt/1.35),d=Math.min(1,proximity*.82+speed*proximity*.65);root.style.setProperty('--px',((e.clientX-cx)/r.width).toFixed(3));root.style.setProperty('--py',((e.clientY-cy)/r.height).toFixed(3));applyLevel(Math.max(level*.72,d));lastX=e.clientX;lastY=e.clientY;lastTime=now;clearTimeout(settleTimer);settleTimer=setTimeout(settle,75)},{passive:true})
 hero.addEventListener('pointerleave',()=>{clearTimeout(settleTimer);settle()},{passive:true})
 experience.addEventListener('wheel',e=>{e.preventDefault();const delta=Math.abs(e.deltaY)>=Math.abs(e.deltaX)?e.deltaY:e.deltaX;if(!currentScene){if(delta<=0)return;wheelIntent+=Math.min(70,Math.abs(delta));clearTimeout(wheelReset);wheelReset=setTimeout(()=>wheelIntent=0,320);if(wheelIntent>=70)showScene(1);return}moveSpiral(delta)},{passive:false})
+
+experience.addEventListener('touchstart',e=>{const y=e.touches[0].clientY;touchStartY=y;touchLastY=y;touchMoved=false},{passive:true})
+experience.addEventListener('touchmove',e=>{const y=e.touches[0].clientY;const delta=touchLastY-y;if(Math.abs(y-touchStartY)>4)touchMoved=true;if(currentScene){e.preventDefault();moveSpiral(delta*1.45)}touchLastY=y},{passive:false})
+experience.addEventListener('touchend',()=>{if(!currentScene&&touchMoved&&touchStartY-touchLastY>45)showScene(1)},{passive:true})
+
 enter.addEventListener('click',()=>showScene(1));back.addEventListener('click',e=>{e.stopPropagation();showScene(0)})
 document.addEventListener('keydown',e=>{if(['ArrowDown','ArrowRight','PageDown'].includes(e.key)){e.preventDefault();currentScene?moveSpiral(90):showScene(1)}if(['ArrowUp','ArrowLeft','PageUp','Escape'].includes(e.key)){e.preventDefault();if(currentScene)showScene(0)}})
 window.addEventListener('resize',()=>{if(currentScene)layoutSpiral()},{passive:true})
